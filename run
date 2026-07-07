@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# Usage: ./run <file.c|file.cpp>
+# Always cross-compiles for Windows and runs via Wine. Silent unless something fails.
+
+set -e
+
+FILE="$1"
+
+if [ -z "$FILE" ]; then
+    echo "Usage: ./run <file.c|file.cpp>"
+    exit 1
+fi
+
+if [ ! -f "$FILE" ]; then
+    echo "File not found: $FILE"
+    exit 1
+fi
+
+EXT="${FILE##*.}"
+BASE="${FILE%.*}"
+
+if [ "$EXT" != "c" ] && [ "$EXT" != "cpp" ]; then
+    echo "Unsupported file type: .$EXT (only .c and .cpp)"
+    exit 1
+fi
+
+if [ "$EXT" = "cpp" ]; then
+    COMPILER=x86_64-w64-mingw32-g++
+    EXTRA="-static-libgcc -static-libstdc++ -static"
+else
+    COMPILER=x86_64-w64-mingw32-gcc
+    EXTRA=""
+fi
+
+OUT="$BASE.exe"
+
+"$COMPILER" "$FILE" -o "$OUT" -lws2_32 $EXTRA || { echo "Compilation failed."; exit 1; }
+
+wine "$OUT" || { echo "Program failed to run."; exit 1; }
